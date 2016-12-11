@@ -82,10 +82,10 @@
       '() 
       (take (* 2 tick-window) (partition tick-window 1 tick-list)))))
 
-(take 2 (simple-moving-average {} 20 timeseries))
+#_(take 2 (simple-moving-average {} 20 timeseries))
 #_(map :last (take 40 (generate-prices 5 15)))
 
-(defn extract-price-only [pricelist] (map :last pricelist))
+#_(defn extract-price-only [pricelist] (map :last pricelist))
 
 (defn exponential-moving-average 
   "From a tick-list, generates an accompanying exponential moving average list. 
@@ -118,4 +118,29 @@ where preceding tick-list allows. Options are: :input - input key function will 
               '() 
               sma-list))))
 
-(take 2 (exponential-moving-average {} 5 timeseries))
+#_(take 2 (exponential-moving-average {} 5 timeseries))
+
+(defn bollinger-band 
+ "From a tick-list, generates an accompanying list with upper-band and lower-band Upper Band: K times an N-period standard deviation above the moving average (MA + Kσ) Lower Band: K times an N-period standard deviation below the moving average (MA − Kσ) K: number of standard deviations N: period, or tick-window we are looking at Returns a list, equal in length to the tick-list, but only with slots filled, where preceding tick-list allows. ** This function assumes the latest tick is on the left**" 
+ ([tick-window tick-list] 
+   (bollinger-band tick-window tick-list (simple-moving-average {} tick-window tick-list))) 
+ ([tick-window tick-list sma-list]
+   ;; At each step, the Standard Deviation will be: the square root of the variance (average of the squared differences from the Mean) 
+   (reduce 
+     (fn [rslt ech] 
+       (let [;; get the Moving Average 
+             ma (:last-trade-price-average ech) ;; work out the mean 
+             mean (/ (reduce 
+                       (fn [rslt ech] (+ (:last (:price ech)) rslt)) 
+                       0 (:population ech)) (count (:population ech))) 
+             ;; Then for each number: subtract the mean and square the result (the squared difference)
+             sq-diff-list (map
+                            (fn [ech] (let [diff (- mean (:last (:price ech)))] (* diff diff))) (:population ech)) 
+             variance (/ (reduce + sq-diff-list) (count (:population ech))) 
+             standard-deviation (. Math sqrt variance)] 
+         (lazy-cat rslt 
+                   [{:last-trade-entry (:last-trade-entry ech)                     
+                     :upper-band (+ ma (* 2 standard-deviation)) 
+                     :lower-band (- ma (* 2 standard-deviation))}]))) 
+     '()
+     sma-list)))
