@@ -1,7 +1,10 @@
 (ns c-finance.core2
   (:require [clj-time.core :as tc] 
             [clj-time.periodic :as tp] 
-            [clj-time.coerce :as tco]))
+            [clj-time.coerce :as tco]
+            [clojure.math.numeric-tower :as math])
+  
+  (:import [org.apache.commons.math3. distribution BetaDistribution]))
 
 (defn random-in-range-2 [lower upper] 
   (let [r (rand upper)] 
@@ -144,3 +147,8 @@ where preceding tick-list allows. Options are: :input - input key function will 
                      :lower-band (- ma (* 2 standard-deviation))}]))) 
      '()
      sma-list)))
+
+(defn polynomial [x] 
+  (-> (+ (* 2
+            (Math/pow x 3)) 
+         (* 2 (Math/pow x 2))) (- (* 3 x))))
