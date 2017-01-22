@@ -5,5 +5,5 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [clj-time "0.9.0"]                 
-                 [org.clojure/ math.numeric-tower "0.0.4"]
-                 [org.apache.commons/ commons-math3 "3.5"]])                 
+                 [org.clojure/math.numeric-tower "0.0.4"]
+                 [org.apache.commons/commons-math3 "3.5"]])                 
