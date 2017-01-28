@@ -77,8 +77,10 @@
       (fn [rslt ech] ; ech=(0 1 2 3 4 5 6), (1 2 3 4 5 6 7), etc.
         (let [tsum (reduce 
                      (fn [rr ee] ; ee=0, 2, 3, etc
-                       (let [ltprice (:last (:price ee))]
-                         (+ ltprice rr))) 0 ech) 
+                       (let [ltprice (:price ee)]
+                         (+ ltprice rr))
+                       #_(let [ltprice (:last (:price ee))]
+                          (+ ltprice rr))) 0 ech) 
               taverage (/ tsum (count ech))]  ; rslt=the average
           ;(prn (last ech))
           (lazy-cat rslt [(merge {:last-trade-entry (last ech)} {output-key taverage :population ech})]))) ;first rslt = '() 
@@ -110,7 +112,8 @@ where preceding tick-list allows. Options are: :input - input key function will 
                 (let [;; price( today) 
                       ;;ltprice (:last (:price ech))
                       ;ltprice (input-key ech)
-                      ltprice (:last (:price (:last-trade-entry ech))) 
+                      ;ltprice (:last (:price (:last-trade-entry ech))) 
+                      ltprice (:price (:last-trade-entry ech)) 
                       ;; EMA( yesterday) 
                       ema-last (if (output-key (last rslt)) (output-key (last rslt)) (:last-trade-price-average ech)) 
                       ;; ** EMA now = price( today) * k + EMA( yesterday) * (1 - k) 
@@ -134,11 +137,11 @@ where preceding tick-list allows. Options are: :input - input key function will 
        (let [;; get the Moving Average 
              ma (:last-trade-price-average ech) ;; work out the mean 
              mean (/ (reduce 
-                       (fn [rslt ech] (+ (:last (:price ech)) rslt)) 
+                       (fn [rslt ech] (+ (:price ech) rslt)) 
                        0 (:population ech)) (count (:population ech))) 
              ;; Then for each number: subtract the mean and square the result (the squared difference)
              sq-diff-list (map
-                            (fn [ech] (let [diff (- mean (:last (:price ech)))] (* diff diff))) (:population ech)) 
+                            (fn [ech] (let [diff (- mean (:price ech))] (* diff diff))) (:population ech)) 
              variance (/ (reduce + sq-diff-list) (count (:population ech))) 
              standard-deviation (. Math sqrt variance)] 
          (lazy-cat rslt 
