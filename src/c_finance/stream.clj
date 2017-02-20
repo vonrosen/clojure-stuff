@@ -1,6 +1,6 @@
 (ns c-finance.stream
   (:require [c-finance.core2 :as core]
-            [clojure.core.async :as async :refer [go go-loop chan close! <! >!]]
+            [clojure.core.async :as async :refer [go go-loop chan close! <! >! <!!]]
             [clojure.java.io :as io]))
 
 (def price-list (core/generate-prices))
@@ -19,3 +19,16 @@
     (spit full-path (list (apply pr-str data)) :encoding "UTF-8"))) 
 
 ;(write-data "datafile.edn" '(: one :two :three))
+
+(defn do-chan []
+  (let [c (chan)] ;; 4. put generate prices into core.async channel 
+    (go (>! c {:ticks prices})) 
+    (go (>! c {:sma sma}))
+    (go (>! c {:ema ema}))
+    (go (>! c {:bol bol})) 
+    ;; 5. analytics reads data from channel 
+    (println (<!! (go (<! c)))) 
+    (println (<!! (go (<! c)))) 
+    (println (<!! (go (<! c)))) 
+    (println (<!! (go (<! c))))
+    (close! c)))

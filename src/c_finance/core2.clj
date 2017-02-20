@@ -3,8 +3,13 @@
             [clj-time.periodic :as tp] 
             [clj-time.coerce :as tco]
             [clojure.math.numeric-tower :as math])
-  
   (:import [org.apache.commons.math3.distribution BetaDistribution]))
+
+(defn rand-double-in-range 
+  "Returns a random double between min and max." 
+  [min max] 
+  ;{:pre [(<= min max)]} 
+  (+ min (* (- max min) (Math/random))))
 
 (defn random-in-range-2 [lower upper] 
   (let [r (rand upper)] 
@@ -32,6 +37,8 @@
 (defn generate-prices-2 
   ([low high] 
     (generate-prices-2 (random-in-range-2 low high)))
+  ([]
+    (generate-prices-2 (rand-double-in-range 1 5) (rand-double-in-range 10 15)))
   ([last-price] 
     (iterate (fn [{:keys [last]}]
                ;(prn last)
@@ -198,12 +205,6 @@ where preceding tick-list allows. Options are: :input - input key function will 
                    (get-opposite-direction-key ydir) 
                    ydir) 
                  (if dc? (get-opposite-direction-fn dirn) dirn)))))))
-
-(defn rand-double-in-range 
-  "Returns a random double between min and max." 
-  [min max] 
-  ;{:pre [(<= min max)]} 
-  (+ min (* (- max min) (Math/random))))
 
 (defn randomize-vertical-dilation 
   [mathfn min max] 
