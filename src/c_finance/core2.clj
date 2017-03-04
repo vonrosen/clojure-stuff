@@ -1,5 +1,5 @@
 (ns c-finance.core2
-  (:require [clj-time.core :as tc] 
+  (:require [clj-time.core :as tc]
             [clj-time.periodic :as tp] 
             [clj-time.coerce :as tco]
             [clojure.math.numeric-tower :as math])
@@ -64,7 +64,7 @@
     (generate-timeseries-2 pricelist (tc/now))) 
   ([pricelist datetime]
     (->> (map (fn [x y] [x y]) 
-              (map (fn [x] {:time x}) 
+              (map (fn [x] {:time (.toDate x)}) 
                    (iterate #(tc/plus % (tc/seconds (rand 4))) datetime)) 
               (map (fn [x] {:price x}) pricelist)) 
       (map (fn [x] (merge (first x) (second x)))))))

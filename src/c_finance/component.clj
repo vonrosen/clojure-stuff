@@ -42,10 +42,6 @@
   (go-loop [data (<! channel)] 
            (if-not (nil? data) 
              (do
-               #_(let [{ticks :ticks sma :sma ema :ema bol :bol} data]
-                  (prn (last ticks))           
-                  (prn (-> ticks last :time .toString))
-                  )
                (let [{ticks :ticks sma :sma ema :ema bol :bol} data 
                      timestamp (-> ticks last :time .toString) 
                      generate-file-name-with-timestamp-fn (fn [fname] (str timestamp "-" fname))] 

@@ -13,10 +13,10 @@
 
 (defn generate-file-name [fname] (str "data/" fname)) 
 
-(defn write-data [fname data] 
+(defn write-data [fname data]  
   (let [full-path (generate-file-name fname)] 
-    (io/make-parents full-path) 
-    (spit full-path (list (apply pr-str data)) :encoding "UTF-8"))) 
+    (io/make-parents full-path)    
+    (spit full-path (pr-str data) :encoding "UTF-8"))) 
 
 ;(write-data "datafile.edn" '(: one :two :three))
 
