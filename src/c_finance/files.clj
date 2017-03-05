@@ -79,3 +79,8 @@
     
     ;(prn ((apply juxt lookupfn-fns-A) files))
     (apply concat ((apply juxt lookupfn-fns-A) files))))
+
+
+#_(defn generate-input-list [constraints] 
+   (if (some #{:source} constraints) 
+     (let [source-source (comp (partial filter #( = :source (first %1))) (partial partition 2)) source-value (comp second source-source) source-key (comp first source-source)] (if (string? source-key) (load-directory (source-key constraints)) source-value))
