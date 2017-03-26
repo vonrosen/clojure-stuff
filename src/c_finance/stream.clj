@@ -3,7 +3,7 @@
             [clojure.core.async :as async :refer [go go-loop chan close! <! >! <!!]]
             [clojure.java.io :as io]))
 
-(def price-list (core/generate-prices))
+(def price-list (core/generate-prices-2))
 (def time-series (core/generate-timeseries-2 price-list))
 (def prices (take 320 time-series))
 (def remaining (drop 320 time-series))
