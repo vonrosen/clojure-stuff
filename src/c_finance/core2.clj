@@ -64,9 +64,9 @@
     (generate-timeseries-2 pricelist (tc/now))) 
   ([pricelist datetime]
     (->> (map (fn [x y] [x y]) 
-              (map (fn [x] {:time (.toDate x)}) 
+              (map (fn [x] {:last-trade-time (.toDate x)}) 
                    (iterate #(tc/plus % (tc/seconds (rand 4))) datetime)) 
-              (map (fn [x] {:price x}) pricelist)) 
+              (map (fn [x] {:last-trade-price x}) pricelist)) 
       (map (fn [x] (merge (first x) (second x)))))))
 
 (defn moving-average [tick-seq tick-window]
@@ -85,10 +85,10 @@
       (fn [ech] 
         ;(prn (:price (first ech)))
         (let [tsum (reduce 
-                     (fn [rr ee] (let [ltprice (:price ee)]
+                     (fn [rr ee] (let [ltprice (input-key ee)]
                                    (+ ltprice rr))) 0 ech)
               taverage (/ tsum (count ech))]          
-          (merge (zipmap etal-keys (map #((% ticks-to-sma-key-map) (last ech)) etal-keys)) 
+          (merge (zipmap etal-keys (map #(% (last ech)) etal-keys)) 
                  {output-key taverage :population ech}))) 
       (partition tick-window 1 tick-list))))
 
@@ -119,43 +119,70 @@
 
 #_(defn extract-price-only [pricelist] (map :last pricelist))
 
-;why is this printing (())) !!!!!
-(defn exponential-moving-average
-  "From a tick-list, generates an accompanying exponential moving average list. 
+
+(defn exponential-moving-average ([options tick-window tick-list] 
+                                   (exponential-moving-average options tick-window tick-list 
+                                                               (simple-moving-average {} tick-window tick-list))) 
+  ([options tick-window tick-list sma-list] ;; 1. calculate 'k' ;; k = 2 / N + 1 ;; N = number of days
+                                            (let [k (/ 2 (+ tick-window 1)) 
+                                                  {input-key :input output-key :output etal-keys :etal :or 
+                                                   {input-key :last-trade-price 
+                                                    output-key :last-trade-price-exponential 
+                                                    etal-keys [:last-trade-price :last-trade-time]}} options] 
+                                              ;; 2. get the simple-moving-average for a given tick - 1
+                                              ;;!!DOH!!! below will hang!!!!!
+                                              (last (reductions (fn [rslt ech] ;; 3. calculate the EMA ( for the first tick, EMA( yesterday) = MA( yesterday) ) 
+                                                                 (let [;; price( today) 
+                                                                       ltprice (input-key ech) 
+                                                                       ;; EMA( yesterday) 
+                                                                       ema-last (if (output-key (last rslt))
+                                                                                  (output-key (last rslt)) 
+                                                                                  (input-key ech))
+                                                                       ;; ** EMA now = price( today) * k + EMA( yesterday) * (1 - k) 
+                                                                       ema-now (+ (* k ltprice) (* ema-last (- 1 k)))] 
+                                                                   (lazy-cat rslt [(merge (zipmap etal-keys 
+                                                                                                  (map #(% (last (:population ech))) etal-keys))
+                                            {output-key ema-now})]))) '() sma-list)))))
+
+#_(defn exponential-moving-average
+   "From a tick-list, generates an accompanying exponential moving average list. 
 EMA = price( today) * k + EMA( yesterday) * (1 - k) k = 2 / N + 1 N = number of days Returns a list, equal in length to the tick-list, but only with slots filled,
 where preceding tick-list allows. Options are: :input - input key function will look for (defaults to :last-trade-price) :output - output key function will emit (defaults to :last-trade-price-exponential) :etal - other keys to emit in each result map ** This function assumes the latest tick is on the left**" 
-  ([options tick-window tick-list] 
-    (exponential-moving-average options tick-window tick-list (simple-moving-average {} tick-window tick-list))) 
-  ([options tick-window tick-list sma-list] 
-    ;; 1. calculate 'k' ;; k = 2 / N + 1 ;; N = number of days    
-    (let [k (/ 2 (+ tick-window 1)) 
-          {input-key :input 
-           output-key :output 
-           etal-keys :etal 
-           :or {input-key :last-trade-price               
-                output-key :last-trade-price-exponential 
-                etal-keys [:last-trade-price :last-trade-time]}} options] 
-      ;; 2. get the simple-moving-average for a given tick - 1
-      ;(prn (first sma-list))      
-      (reductions (fn [rslt ech] ;; 3. calculate the EMA (for the first tick, EMA( yesterday) = MA( yesterday) )                
-                                           (let [;; price( today) 
-                                                 ;;ltprice (:last (:price ech))
-                                                 ;ltprice (input-key ech)
-                                                 ;ltprice (:last (:price (:last-trade-entry ech))) 
-                                                 ltprice (:last-trade-price ech) 
-                                                 ;; EMA( yesterday) 
-                                                 ema-last (if (output-key (last rslt)) (output-key (last rslt)) (:last-trade-price ech)) 
-                                                 ;; ** EMA now = price( today) * k + EMA( yesterday) * (1 - k) 
-                                                 ema-now (+ (* k ltprice) (* ema-last (- 1 k)))]
-                                             (prn rslt)
-                                             #_(lazy-cat rslt [(merge                                                
-                                                               (zipmap 
-                                                                 etal-keys 
-                                                                 (map #(% (last (:population ech))) etal-keys)) 
-                                                               {output-key ema-now})]))) 
-                                     '()
-                                     sma-list)
-      #_(last ))))
+   ([options tick-window tick-list] 
+     (exponential-moving-average options tick-window tick-list (simple-moving-average {} tick-window tick-list))) 
+   ([options tick-window tick-list sma-list] 
+     ;; 1. calculate 'k' ;; k = 2 / N + 1 ;; N = number of days    
+     (let [k (/ 2 (+ tick-window 1)) 
+           {input-key :input 
+            output-key :output 
+            etal-keys :etal 
+            :or {input-key :last-trade-price               
+                 output-key :last-trade-price-exponential 
+                 etal-keys [:last-trade-price :last-trade-time]}} options] 
+       ;; 2. get the simple-moving-average for a given tick - 1
+       ;(prn (first sma-list))
+       ;(prn (take 1 sma-list))
+       (last
+         (reductions (fn [rslt ech] ;; 3. calculate the EMA (for the first tick, EMA( yesterday) = MA( yesterday) )
+                      
+                                                (let [;; price( today) 
+                                                      ;;ltprice (:last (:price ech))
+                                                      ltprice (input-key ech)
+                                                      ;ltprice (:last (:price (:last-trade-entry ech)))
+                                                      ;; EMA( yesterday) 
+                                                      ema-last (if (output-key (last rslt)) 
+                                                                 (output-key (last rslt)) 
+                                                                 (input-key ech)) 
+                                                      ;; ** EMA now = price( today) * k + EMA( yesterday) * (1 - k) 
+                                                      ema-now (+ (* k ltprice) (* ema-last (- 1 k)))]                                                 
+                                                  (lazy-cat rslt [(merge                                                
+                                                                   (zipmap 
+                                                                     etal-keys 
+                                                                     (map #(% (last (:population ech))) etal-keys)) 
+                                                                   {output-key ema-now})]))) 
+                                          '()
+                                          sma-list))
+       #_(last ))))
 
 #_(take 2 (exponential-moving-average {} 5 timeseries))
 
@@ -359,5 +386,5 @@ where preceding tick-list allows. Options are: :input - input key function will 
 (defn generate-prices 
   ([] 
     (generate-prices (BetaDistribution. 2.0 4.1))) 
-  ([beta-distribution] 
+  ([beta-distribution]
     (map (fn [x] (if (neg? x) (* -1 x) x)) (distinct (apply concat (generate-prices-reductions beta-distribution))))))
